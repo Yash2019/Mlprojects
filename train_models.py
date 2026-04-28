@@ -9,6 +9,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
+from sklearn.svm import LinearSVC
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, classification_report
 
 warnings.filterwarnings('ignore')
@@ -185,23 +187,19 @@ def train_sentiment_analysis():
     X = df['Description']
     y = df['Sentiment_encoded']
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
 
     # TF-IDF vectorizer
-    tfidf = TfidfVectorizer(max_features=5000)
+    tfidf = TfidfVectorizer(max_features=10000, ngram_range=(1, 2), min_df=2)
     X_train_tfidf = tfidf.fit_transform(X_train)
     X_test_tfidf = tfidf.transform(X_test)
 
-    # Train Random Forest (matching notebook approach)
-    model = RandomForestClassifier(
-        n_estimators=200,
-        min_samples_split=5,
-        min_samples_leaf=1,
-        max_features='log2',
-        max_depth=None,
-        bootstrap=True,
-        random_state=42,
-        n_jobs=-1,
+    # Balanced linear SVM works well for skewed TF-IDF text data; calibration keeps probabilities for the UI chart.
+    model = CalibratedClassifierCV(
+        LinearSVC(class_weight="balanced", random_state=42),
+        cv=3,
     )
     model.fit(X_train_tfidf, y_train)
 
