@@ -1,9 +1,28 @@
 import streamlit as st
 import requests
-import json
 import os
 
 API_URL = os.environ.get("API_URL", "http://127.0.0.1:8000")
+REQUEST_TIMEOUT = 30
+
+
+def parse_api_response(resp):
+    """Parse API JSON safely so Streamlit does not crash on HTML/error pages."""
+    content_type = resp.headers.get("content-type", "")
+    try:
+        return resp.json()
+    except requests.exceptions.JSONDecodeError:
+        preview = resp.text.strip().replace("\n", " ")[:300] or "<empty response>"
+        st.error(
+            "The API did not return JSON. "
+            f"Status: {resp.status_code}. Content-Type: {content_type or 'unknown'}."
+        )
+        st.code(preview)
+        st.info(
+            f"Current API_URL is {API_URL}. On Render, this must be the URL of "
+            "your deployed FastAPI service, not the Streamlit service itself."
+        )
+        st.stop()
 
 st.set_page_config(page_title="ML Projects Dashboard", page_icon="🧠", layout="wide")
 
@@ -52,8 +71,8 @@ if page == "Credit Risk Prediction":
             "cb_person_cred_hist_length": cb_person_cred_hist_length,
         }
         try:
-            resp = requests.post(f"{API_URL}/predict/credit-risk", json=payload)
-            result = resp.json()
+            resp = requests.post(f"{API_URL}/predict/credit-risk", json=payload, timeout=REQUEST_TIMEOUT)
+            result = parse_api_response(resp)
             if resp.status_code == 200:
                 col_a, col_b = st.columns(2)
                 col_a.metric("Prediction", result['label'])
@@ -64,6 +83,8 @@ if page == "Credit Risk Prediction":
                     st.success("✅ Low risk — likely to repay.")
             else:
                 st.error(f"API Error: {result.get('detail', 'Unknown error')}")
+        except requests.exceptions.Timeout:
+            st.error(f"The API request timed out after {REQUEST_TIMEOUT} seconds.")
         except requests.exceptions.ConnectionError:
             st.error("❌ Cannot connect to the API. Make sure the FastAPI server is running (`uvicorn api:app --reload`).")
 
@@ -91,8 +112,8 @@ elif page == "Fraud Detection":
     if st.button("🔮 Detect Fraud", use_container_width=True):
         payload = {"Time": Time, "Amount": Amount, **features}
         try:
-            resp = requests.post(f"{API_URL}/predict/fraud-detection", json=payload)
-            result = resp.json()
+            resp = requests.post(f"{API_URL}/predict/fraud-detection", json=payload, timeout=REQUEST_TIMEOUT)
+            result = parse_api_response(resp)
             if resp.status_code == 200:
                 col_a, col_b = st.columns(2)
                 col_a.metric("Prediction", result['label'])
@@ -103,6 +124,8 @@ elif page == "Fraud Detection":
                     st.success("✅ This transaction appears legitimate.")
             else:
                 st.error(f"API Error: {result.get('detail', 'Unknown error')}")
+        except requests.exceptions.Timeout:
+            st.error(f"The API request timed out after {REQUEST_TIMEOUT} seconds.")
         except requests.exceptions.ConnectionError:
             st.error("❌ Cannot connect to the API server.")
 
@@ -134,8 +157,8 @@ elif page == "Loan Prediction":
             "City": City, "EmploymentType": EmploymentType,
         }
         try:
-            resp = requests.post(f"{API_URL}/predict/loan-prediction", json=payload)
-            result = resp.json()
+            resp = requests.post(f"{API_URL}/predict/loan-prediction", json=payload, timeout=REQUEST_TIMEOUT)
+            result = parse_api_response(resp)
             if resp.status_code == 200:
                 col_a, col_b = st.columns(2)
                 col_a.metric("Prediction", result['label'])
@@ -146,6 +169,8 @@ elif page == "Loan Prediction":
                     st.warning("⚠️ Loan is likely to be REJECTED.")
             else:
                 st.error(f"API Error: {result.get('detail', 'Unknown error')}")
+        except requests.exceptions.Timeout:
+            st.error(f"The API request timed out after {REQUEST_TIMEOUT} seconds.")
         except requests.exceptions.ConnectionError:
             st.error("❌ Cannot connect to the API server.")
 
@@ -165,8 +190,8 @@ elif page == "Sentiment Analysis":
         else:
             payload = {"text": text}
             try:
-                resp = requests.post(f"{API_URL}/predict/sentiment-analysis", json=payload)
-                result = resp.json()
+                resp = requests.post(f"{API_URL}/predict/sentiment-analysis", json=payload, timeout=REQUEST_TIMEOUT)
+                result = parse_api_response(resp)
                 if resp.status_code == 200:
                     st.metric("Sentiment", result['label'].upper())
                     st.markdown("**Probability breakdown:**")
@@ -174,5 +199,7 @@ elif page == "Sentiment Analysis":
                         st.progress(prob, text=f"{label}: {prob*100:.1f}%")
                 else:
                     st.error(f"API Error: {result.get('detail', 'Unknown error')}")
+            except requests.exceptions.Timeout:
+                st.error(f"The API request timed out after {REQUEST_TIMEOUT} seconds.")
             except requests.exceptions.ConnectionError:
                 st.error("❌ Cannot connect to the API server.")
