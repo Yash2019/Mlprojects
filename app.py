@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import os
+import pandas as pd
 
 API_URL = os.environ.get("API_URL", "http://127.0.0.1:8000")
 REQUEST_TIMEOUT = 30
@@ -24,13 +25,20 @@ def parse_api_response(resp):
         )
         st.stop()
 
+
+def show_probability_chart(title, probabilities):
+    chart_data = pd.DataFrame(
+        {"Probability (%)": {label: round(prob * 100, 1) for label, prob in probabilities.items()}}
+    )
+    st.markdown(f"**{title}**")
+    st.bar_chart(chart_data)
+
 st.set_page_config(page_title="ML Projects Dashboard", page_icon="🧠", layout="wide")
 
 # ── Sidebar ──────────────────────────────────────────
 st.sidebar.title("🧠 ML Dashboard")
 st.sidebar.markdown("---")
 page = st.sidebar.radio("Select a Project", [
-    "Overview",
     "Credit Risk Prediction",
     "Fraud Detection",
     "Loan Prediction",
@@ -39,35 +47,7 @@ page = st.sidebar.radio("Select a Project", [
 
 
 # ── Credit Risk ──────────────────────────────────────
-if page == "Overview":
-    st.title("ML Projects Overview")
-    st.markdown("A quick snapshot of the models available in this dashboard.")
-    st.markdown("---")
-
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Projects", "4")
-    col2.metric("Models", "4")
-    col3.metric("Backend", "API")
-    col4.metric("UI", "Streamlit")
-
-    st.subheader("Project Areas")
-    project_counts = {
-        "Financial Risk": 2,
-        "Fraud Detection": 1,
-        "Text Analysis": 1,
-    }
-    st.bar_chart(project_counts)
-
-    st.subheader("Input Fields by Project")
-    input_counts = {
-        "Credit Risk": 10,
-        "Fraud Detection": 30,
-        "Loan Prediction": 9,
-        "Sentiment Analysis": 1,
-    }
-    st.bar_chart(input_counts)
-
-elif page == "Credit Risk Prediction":
+if page == "Credit Risk Prediction":
     st.title("💳 Credit Risk Prediction")
     st.markdown("Predict whether a borrower is likely to **default** on a loan.")
     st.markdown("---")
@@ -106,6 +86,10 @@ elif page == "Credit Risk Prediction":
                 col_a, col_b = st.columns(2)
                 col_a.metric("Prediction", result['label'])
                 col_b.metric("Default Probability", f"{result['default_probability']*100:.1f}%")
+                show_probability_chart("Prediction confidence", {
+                    "No Default": 1 - result['default_probability'],
+                    "Default": result['default_probability'],
+                })
                 if result['prediction'] == 1:
                     st.error("⚠️ High risk of default!")
                 else:
@@ -177,6 +161,10 @@ elif page == "Fraud Detection":
                 col_a, col_b = st.columns(2)
                 col_a.metric("Prediction", result['label'])
                 col_b.metric("Fraud Probability", f"{result['fraud_probability']*100:.1f}%")
+                show_probability_chart("Prediction confidence", {
+                    "Legitimate": 1 - result['fraud_probability'],
+                    "Fraud": result['fraud_probability'],
+                })
                 if result['prediction'] == 1:
                     st.error("🚨 This transaction looks FRAUDULENT!")
                 else:
@@ -222,6 +210,10 @@ elif page == "Loan Prediction":
                 col_a, col_b = st.columns(2)
                 col_a.metric("Prediction", result['label'])
                 col_b.metric("Approval Probability", f"{result['approval_probability']*100:.1f}%")
+                show_probability_chart("Prediction confidence", {
+                    "Rejected": 1 - result['approval_probability'],
+                    "Approved": result['approval_probability'],
+                })
                 if result['prediction'] == 1:
                     st.success("✅ Loan is likely to be APPROVED!")
                 else:
@@ -253,9 +245,7 @@ elif page == "Sentiment Analysis":
                 result = parse_api_response(resp)
                 if resp.status_code == 200:
                     st.metric("Sentiment", result['label'].upper())
-                    st.markdown("**Probability breakdown:**")
-                    for label, prob in result['probabilities'].items():
-                        st.progress(prob, text=f"{label}: {prob*100:.1f}%")
+                    show_probability_chart("Sentiment confidence", result['probabilities'])
                 else:
                     st.error(f"API Error: {result.get('detail', 'Unknown error')}")
             except requests.exceptions.Timeout:
