@@ -30,6 +30,7 @@ st.set_page_config(page_title="ML Projects Dashboard", page_icon="🧠", layout=
 st.sidebar.title("🧠 ML Dashboard")
 st.sidebar.markdown("---")
 page = st.sidebar.radio("Select a Project", [
+    "Overview",
     "Credit Risk Prediction",
     "Fraud Detection",
     "Loan Prediction",
@@ -38,7 +39,35 @@ page = st.sidebar.radio("Select a Project", [
 
 
 # ── Credit Risk ──────────────────────────────────────
-if page == "Credit Risk Prediction":
+if page == "Overview":
+    st.title("ML Projects Overview")
+    st.markdown("A quick snapshot of the models available in this dashboard.")
+    st.markdown("---")
+
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Projects", "4")
+    col2.metric("Models", "4")
+    col3.metric("Backend", "API")
+    col4.metric("UI", "Streamlit")
+
+    st.subheader("Project Areas")
+    project_counts = {
+        "Financial Risk": 2,
+        "Fraud Detection": 1,
+        "Text Analysis": 1,
+    }
+    st.bar_chart(project_counts)
+
+    st.subheader("Input Fields by Project")
+    input_counts = {
+        "Credit Risk": 10,
+        "Fraud Detection": 30,
+        "Loan Prediction": 9,
+        "Sentiment Analysis": 1,
+    }
+    st.bar_chart(input_counts)
+
+elif page == "Credit Risk Prediction":
     st.title("💳 Credit Risk Prediction")
     st.markdown("Predict whether a borrower is likely to **default** on a loan.")
     st.markdown("---")
