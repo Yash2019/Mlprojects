@@ -1,6 +1,4 @@
-"""
-Streamlit Dashboard for all 4 ML Projects.
-"""
+
 import streamlit as st
 import requests
 import json
