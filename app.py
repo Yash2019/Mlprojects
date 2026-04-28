@@ -124,19 +124,49 @@ elif page == "Fraud Detection":
     st.markdown("Detect fraudulent credit card transactions using PCA-transformed features.")
     st.markdown("---")
 
-    st.info("This model uses 28 PCA components (V1–V28) plus Time and Amount. Enter values below or use defaults for a quick test.")
+    st.info(
+        "For a quick demo, choose a sample transaction. For accurate custom predictions, "
+        "provide the advanced anonymized PCA fields from the original feature pipeline."
+    )
 
-    with st.expander("📝 Transaction Features", expanded=True):
+    normal_sample = {
+        "Time": 0.0,
+        "Amount": 100.0,
+        **{f"V{i}": 0.0 for i in range(1, 29)},
+    }
+    suspicious_sample = {
+        "Time": 406.0,
+        "Amount": 0.0,
+        "V1": -2.3122265423263, "V2": 1.95199201064158, "V3": -1.60985073229769,
+        "V4": 3.9979055875468, "V5": -0.522187864667764, "V6": -1.42654531920595,
+        "V7": -2.53738730624579, "V8": 1.39165724829804, "V9": -2.77008927719433,
+        "V10": -2.77227214465915, "V11": 3.20203320709635, "V12": -2.89990738849473,
+        "V13": -0.595221881324605, "V14": -4.28925378244217, "V15": 0.389724120274487,
+        "V16": -1.14074717980657, "V17": -2.83005567450437, "V18": -0.0168224681808257,
+        "V19": 0.416955705037907, "V20": 0.126910559061474, "V21": 0.517232370861764,
+        "V22": -0.0350493686052974, "V23": -0.465211076182388, "V24": 0.320198198514526,
+        "V25": 0.0445191674731724, "V26": 0.177839798284401, "V27": 0.261145002567677,
+        "V28": -0.143275874698919,
+    }
+
+    input_mode = st.radio("Transaction input", ["Normal sample", "Suspicious sample", "Custom"], horizontal=True)
+    selected_sample = suspicious_sample if input_mode == "Suspicious sample" else normal_sample
+
+    col1, col2 = st.columns(2)
+    with col1:
+        Time = st.number_input("Transaction time (seconds)", value=float(selected_sample["Time"]))
+    with col2:
+        Amount = st.number_input("Transaction amount ($)", value=float(selected_sample["Amount"]))
+
+    features = {f"V{i}": float(selected_sample[f"V{i}"]) for i in range(1, 29)}
+    advanced_open = input_mode == "Custom"
+    with st.expander("Advanced anonymized model fields", expanded=advanced_open):
+        st.caption("These V1-V28 values are PCA-transformed fields. Leave samples as-is for demo predictions.")
         col1, col2, col3 = st.columns(3)
-        with col1:
-            Time = st.number_input("Time (seconds)", value=0.0)
-            Amount = st.number_input("Amount ($)", value=100.0)
-        features = {}
+        cols = [col1, col2, col3]
         for i in range(1, 29):
-            col_idx = (i - 1) % 3
-            cols = [col1, col2, col3]
-            with cols[col_idx]:
-                features[f"V{i}"] = st.number_input(f"V{i}", value=0.0, key=f"v{i}")
+            with cols[(i - 1) % 3]:
+                features[f"V{i}"] = st.number_input(f"V{i}", value=features[f"V{i}"], key=f"v{i}")
 
     if st.button("🔮 Detect Fraud", use_container_width=True):
         payload = {"Time": Time, "Amount": Amount, **features}
